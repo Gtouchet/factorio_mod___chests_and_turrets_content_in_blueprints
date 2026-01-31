@@ -25,22 +25,29 @@ local accepted_turrets = {
 -----------------------------------
 function snapshot_turrets_content(blueprint, mapping)
 	local blueprint_entities = blueprint.get_blueprint_entities()
-	for i, entity in ipairs(blueprint_entities) do
-		if (accepted_turrets[entity.name]) then
-			local src = mapping[entity.entity_number]
-			local inventory = src.get_inventory(defines.inventory.turret_ammo)
-			if (inventory) then
-				local content = {}
-				for slot, item in ipairs(inventory.get_contents()) do
-					content["slot_"..slot] = {
-						name = item.name,
-						count = item.count,
-						quality = item.quality,
-					}
+	if not blueprint_entities then return end
+
+	for i, blueprint_entity in ipairs(blueprint_entities) do
+		if accepted_turrets[blueprint_entity.name] then
+			local source = mapping[blueprint_entity.entity_number]
+			if source and source.valid then
+				local inventory = source.get_inventory(defines.inventory.turret_ammo)
+				if inventory and inventory.valid then
+					local tags = {}
+					for slot = 1, #inventory do
+						local stack = inventory[slot]
+						if stack and stack.valid_for_read then
+							tags[#tags + 1] = {
+								name = stack.name,
+								count = stack.count,
+								quality = stack.quality,
+							}
+						end
+					end
+					blueprint.set_blueprint_entity_tags(i, {
+						tags = tags,
+					})
 				end
-				blueprint.set_blueprint_entity_tags(i, {
-					content = content,
-				})
 			end
 		end
 	end
@@ -48,12 +55,16 @@ end
 
 function apply_turret_inventory(player, turret, ghost)
 	local turret_inventory = turret.get_inventory(defines.inventory.turret_ammo)
-	for _, item in pairs(ghost.content) do
+	if not turret_inventory and turret_inventory.valid then return end
+	
+	if not ghost.tags then return end
+	
+	for _, item in pairs(ghost.tags) do
 		local player_item_count = player_item_count(player, item)
-		if (player_item_count < item.count) then
+		if player_item_count < item.count then
 			item.count = player_item_count
 		end
-		if (item.count > 0) then
+		if item.count > 0 then
 			remove_from_player_inventory(player, item)
 			turret_inventory.insert({
 				name = item.name,
@@ -72,23 +83,30 @@ end
 -----------------------------------
 function snapshot_chests_content(blueprint, mapping)
 	local blueprint_entities = blueprint.get_blueprint_entities()
-	for i, entity in ipairs(blueprint_entities) do
-		if (accepted_chests[entity.name]) then
-			local src = mapping[entity.entity_number]
-			local inventory = src.get_inventory(defines.inventory.chest)
-			if (inventory) then
-				local content = {}
-				for slot, item in ipairs(inventory.get_contents()) do
-					content["slot_"..slot] = {
-						name = item.name,
-						count = item.count,
-						quality = item.quality,
-						slot = slot,
-					}
+	if not blueprint_entities then return end
+
+	for i, blueprint_entity in ipairs(blueprint_entities) do
+		if accepted_chests[blueprint_entity.name] then
+			local source = mapping[blueprint_entity.entity_number]
+			if source and source.valid then
+				local inventory = source.get_inventory(defines.inventory.chest)
+				if inventory and inventory.valid then
+					local tags = {}
+					for slot = 1, #inventory do
+						local stack = inventory[slot]
+						if stack and stack.valid_for_read then
+							tags[#tags + 1] = {
+								name = stack.name,
+								count = stack.count,
+								slot = slot,
+								quality = stack.quality,
+							}
+						end
+					end
+					blueprint.set_blueprint_entity_tags(i, {
+						tags = tags,
+					})
 				end
-				blueprint.set_blueprint_entity_tags(i, {
-					content = content,
-				})
 			end
 		end
 	end
@@ -96,14 +114,18 @@ end
 
 function apply_chest_inventory(player, chest, ghost)
 	local chest_inventory = chest.get_inventory(defines.inventory.chest)
-	for _, item in pairs(ghost.content) do
+	if not chest_inventory and chest_inventory.valid then return end
+	
+	if not ghost.tags then return end
+
+	for _, item in pairs(ghost.tags) do
 		local player_item_count = player_item_count(player, item)
-		if (player_item_count < item.count) then
+		if player_item_count < item.count then
 			item.count = player_item_count
 		end
-		if (item.count > 0) then
+		if item.count > 0 then
 			remove_from_player_inventory(player, item)
-			chest_inventory.insert({
+			chest_inventory[item.slot].set_stack({
 				name = item.name,
 				count = item.count,
 				quality = item.quality,
@@ -118,7 +140,7 @@ end
 -- Player inventory handling
 -----------------------------------
 function player_item_count(player, item)
-	if not (player and player.valid) then return 0 end
+	if not player and player.valid then return 0 end
 	return player.get_main_inventory().get_item_count({
 		name = item.name,
 		quality = item.quality,
@@ -126,7 +148,7 @@ function player_item_count(player, item)
 end
 
 function remove_from_player_inventory(player, item)
-	if not (player and player.valid) then return 0 end
+	if not player and player.valid then return 0 end
 	return player.get_main_inventory().remove({
 		name = item.name,
 		count = item.count,
@@ -144,13 +166,13 @@ local ghosts = {}
 
 function save_ghost_tags(entity)
 	local tags = entity.tags
-	if (tags) then
+	if tags then
 		ghosts[entity.position.x .. "," .. entity.position.y] = tags
 	end
 end
 
 function remove_ghost(position)
-	if (ghosts[position]) then
+	if ghosts[position] then
 		ghosts[position] = nil
 	end
 end
@@ -162,10 +184,10 @@ end
 -----------------------------------
 script.on_event(defines.events.on_player_setup_blueprint, function(event)
 	local blueprint = event.stack
-	if not (blueprint and blueprint.valid) then return end
+	if not blueprint and blueprint.valid then return end
 	
 	local mapping = event.mapping.get()
-	if not (mapping) then return end
+	if not mapping then return end
 	
 	snapshot_turrets_content(blueprint, mapping)
 	snapshot_chests_content(blueprint, mapping)
@@ -173,21 +195,21 @@ end)
 
 script.on_event(defines.events.on_built_entity, function(event)
 	local player = game.get_player(event.player_index)
-	if not (player) then return end
+	if not player then return end
 	
 	local entity = event.entity
-	if not (entity and entity.valid) then return end
+	if not entity and entity.valid then return end
 	
-	if (entity.name == "entity-ghost") then
+	if entity.name == "entity-ghost" then
 		save_ghost_tags(entity)
 	else
 		local position = entity.position.x .. "," .. entity.position.y
 		local pre_existing_ghost = ghosts[position]
-		if (pre_existing_ghost) then
-			if (accepted_turrets[entity.name]) then
+		if pre_existing_ghost then
+			if accepted_turrets[entity.name] then
 				apply_turret_inventory(player, entity, pre_existing_ghost)
 			end
-			if (accepted_chests[entity.name]) then
+			if accepted_chests[entity.name] then
 				apply_chest_inventory(player, entity, pre_existing_ghost)
 			end
 			remove_ghost(position)
@@ -197,16 +219,16 @@ end)
 
 script.on_event(defines.events.on_player_mined_entity, function(event)
 	local entity = event.entity
-	if not (entity and entity.valid) then return end
+	if not entity and entity.valid then return end
 	
-	if (entity.name ~= "entity-ghost") then return end
+	if entity.name ~= "entity-ghost" then return end
 
 	remove_ghost(entity.position.x .. "," .. entity.position.y)
 end)
 
 script.on_event(defines.events.on_pre_ghost_deconstructed, function(event)
 	local ghost = event.ghost
-	if not (ghost and ghost.valid) then return end
+	if not ghost and ghost.valid then return end
 
 	remove_ghost(ghost.position.x .. "," .. ghost.position.y)
 end)
