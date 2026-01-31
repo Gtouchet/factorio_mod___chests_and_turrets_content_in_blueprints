@@ -1,0 +1,9 @@
+{
+  "name": "chests_and_turrets_content_in_blueprints",
+  "version": "0.1.1",
+  "title": "Chests and turrets content in blueprints",
+  "author": "Bifrost",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0"],
+  "description": "Saves the contents of chests and the ammunition of turrets when you create a blueprint"
+}
