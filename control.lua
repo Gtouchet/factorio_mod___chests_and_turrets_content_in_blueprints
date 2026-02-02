@@ -38,6 +38,10 @@ function snapshot_turrets_content(blueprint, mapping)
 						local stack = inventory[slot]
 						if stack and stack.valid_for_read then
 							tags[#tags + 1] = {
+<<<<<<< HEAD
+=======
+								entity_type = blueprint_entity.name,
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 								name = stack.name,
 								count = stack.count,
 								quality = stack.quality,
@@ -96,6 +100,10 @@ function snapshot_chests_content(blueprint, mapping)
 						local stack = inventory[slot]
 						if stack and stack.valid_for_read then
 							tags[#tags + 1] = {
+<<<<<<< HEAD
+=======
+								entity_type = blueprint_entity.name,
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 								name = stack.name,
 								count = stack.count,
 								slot = slot,
@@ -180,6 +188,74 @@ end
 
 
 -----------------------------------
+<<<<<<< HEAD
+=======
+-- Autobuild mod compatibility
+-----------------------------------
+local autobuild_mod_enabled = false
+
+script.on_load(function()
+	autobuild_mod_enabled = script.active_mods["autobuild"] ~= nil
+end)
+
+function handle_autobuild_built_entity(event)
+	local player = game.get_player(event.player_index)
+	if not player then return end
+
+	local entity = event.entity
+	if not entity or not entity.valid then return end
+
+	save_ghost_tags(entity)
+	local position = entity.position.x .. "," .. entity.position.y
+	local pre_existing_ghost = ghosts[position]
+
+	if not pre_existing_ghost or not pre_existing_ghost.tags or not pre_existing_ghost.tags[1] then
+		return
+	end
+	
+	local entity_type = pre_existing_ghost.tags[1].entity_type
+
+	local can_build_entity = player_item_count(player, {
+		name = entity_type,
+		count = 1,
+	}) > 0
+	if not can_build_entity then
+		return
+	end
+	
+	if accepted_turrets[entity_type] then
+		local turret = game.surfaces[entity.surface.name].create_entity{
+			name = entity_type,
+			position = entity.position,
+			force = game.forces.player,
+		}
+		apply_turret_inventory(player, turret, pre_existing_ghost)
+		remove_from_player_inventory(player, {
+			name = entity_type,
+			count = 1,
+		})
+	end
+
+	if accepted_chests[entity_type] then
+		local chest = game.surfaces[entity.surface.name].create_entity{
+			name = entity_type,
+			position = entity.position,
+			force = game.forces.player,
+		}
+		apply_chest_inventory(player, chest, pre_existing_ghost)
+		remove_from_player_inventory(player, {
+			name = entity_type,
+			count = 1,
+		})
+	end
+
+	remove_ghost(position)
+end
+
+
+
+-----------------------------------
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 -- API events
 -----------------------------------
 script.on_event(defines.events.on_player_setup_blueprint, function(event)
@@ -194,11 +270,23 @@ script.on_event(defines.events.on_player_setup_blueprint, function(event)
 end)
 
 script.on_event(defines.events.on_built_entity, function(event)
+<<<<<<< HEAD
+=======
+	if autobuild_mod_enabled then
+		handle_autobuild_built_entity(event)
+		return
+	end
+
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 	local player = game.get_player(event.player_index)
 	if not player then return end
 	
 	local entity = event.entity
+<<<<<<< HEAD
 	if not entity and entity.valid then return end
+=======
+	if not entity or not entity.valid then return end
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 	
 	if entity.name == "entity-ghost" then
 		save_ghost_tags(entity)
@@ -219,9 +307,15 @@ end)
 
 script.on_event(defines.events.on_player_mined_entity, function(event)
 	local entity = event.entity
+<<<<<<< HEAD
 	if not entity and entity.valid then return end
 	
 	if entity.name ~= "entity-ghost" then return end
+=======
+	if not entity or not entity.valid then return end
+	
+	if not entity.name == "entity-ghost" then return end
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
 
 	remove_ghost(entity.position.x .. "," .. entity.position.y)
 end)
@@ -232,3 +326,7 @@ script.on_event(defines.events.on_pre_ghost_deconstructed, function(event)
 
 	remove_ghost(ghost.position.x .. "," .. ghost.position.y)
 end)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)

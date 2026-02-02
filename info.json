@@ -1,6 +1,10 @@
 {
   "name": "chests_and_turrets_content_in_blueprints",
+<<<<<<< HEAD
   "version": "0.1.2",
+=======
+  "version": "0.1.3",
+>>>>>>> 3ec83bd (Added autobuild mod compatibility)
   "title": "Chests and turrets content in blueprints",
   "author": "Bifrost",
   "factorio_version": "2.0",
