@@ -261,13 +261,13 @@ script.on_event(defines.events.on_player_setup_blueprint, function(event)
 end)
 
 script.on_event(defines.events.on_built_entity, function(event)
-	if autobuild_mod_enabled then
+	local player = game.get_player(event.player_index)
+	if not player then return end
+
+	if autobuild_mod_enabled and player.is_shortcut_toggled("autobuild-shortcut-toggle-construction") then
 		handle_autobuild_built_entity(event)
 		return
 	end
-
-	local player = game.get_player(event.player_index)
-	if not player then return end
 	
 	local entity = event.entity
 	if not entity or not entity.valid then return end
